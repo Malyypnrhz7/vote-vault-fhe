@@ -1,0 +1,27 @@
+<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="voteGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#3b82f6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#8b5cf6;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="backgroundGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1e293b;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0f172a;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background circle -->
+  <circle cx="16" cy="16" r="15" fill="url(#backgroundGradient)" stroke="url(#voteGradient)" stroke-width="2"/>
+  
+  <!-- Ballot box icon -->
+  <rect x="8" y="12" width="16" height="12" rx="2" fill="url(#voteGradient)" stroke="white" stroke-width="1"/>
+  
+  <!-- Ballot slot -->
+  <rect x="10" y="8" width="12" height="4" rx="1" fill="url(#voteGradient)" stroke="white" stroke-width="1"/>
+  
+  <!-- Vote text -->
+  <text x="16" y="22" font-family="Arial, sans-serif" font-size="6" font-weight="bold" text-anchor="middle" fill="white">VOTE</text>
+</svg>
+
+
+
