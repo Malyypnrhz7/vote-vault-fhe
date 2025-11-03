@@ -219,6 +219,7 @@ export const VotingInterface = () => {
                     description={proposal.description}
                     timeRemaining={calculateTimeRemaining(proposal.endTime)}
                     totalVotes={proposal.totalVotes}
+                    showEncryptedCount
                     onVote={handleVote}
                     hasVoted={userVotes[proposal.id] || !!getVoteForProposal(proposal.id)}
                     userVote={getVoteForProposal(proposal.id)?.vote}

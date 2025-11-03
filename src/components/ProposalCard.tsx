@@ -15,6 +15,7 @@ interface ProposalCardProps {
   onVote: (proposalId: string, vote: "for" | "against") => void;
   hasVoted: boolean;
   userVote?: "for" | "against";
+  showEncryptedCount?: boolean;
 }
 
 export const ProposalCard = ({
@@ -71,7 +72,7 @@ export const ProposalCard = ({
           </div>
           <div className="flex items-center gap-1">
             <Users className="h-4 w-4" />
-            <span>{totalVotes} votes</span>
+            <span>{showEncryptedCount ? 'Encrypted' : `${totalVotes} votes`}</span>
           </div>
         </div>
 

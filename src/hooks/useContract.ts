@@ -103,14 +103,28 @@ export const useContract = () => {
           console.warn(`Failed to load proposal ${i}:`, error);
         }
       }
-      
+      // Build userVotes from chain (disable vote buttons)
+      const userVotesMap: Record<string, boolean> = {};
+      try {
+        if (provider) {
+          const signer = await provider.getSigner();
+          const addr = await signer.getAddress();
+          for (const p of proposals) {
+            try {
+              userVotesMap[p.id] = await CONTRACT_FUNCTIONS.hasVoted(contract, addr, parseInt(p.id));
+            } catch (_) {}
+          }
+        }
+      } catch (_) {}
+
       setState(prev => ({
         ...prev,
         contract,
         provider,
         isConnected: true,
         isLoading: false,
-        proposals
+        proposals,
+        userVotes: { ...prev.userVotes, ...userVotesMap }
       }));
     } catch (error) {
       console.warn('Contract initialization failed, running in demo mode:', error);
@@ -286,8 +300,21 @@ export const useContract = () => {
           console.warn(`Failed to load proposal ${i}:`, error);
         }
       }
-      
-      setState(prev => ({ ...prev, proposals }));
+      // Refresh userVotes using connected provider if any
+      const userVotesMap: Record<string, boolean> = {};
+      try {
+        if (state.provider) {
+          const signer = await state.provider.getSigner();
+          const addr = await signer.getAddress();
+          for (const p of proposals) {
+            try {
+              userVotesMap[p.id] = await CONTRACT_FUNCTIONS.hasVoted(state.contract, addr, parseInt(p.id));
+            } catch (_) {}
+          }
+        }
+      } catch (_) {}
+
+      setState(prev => ({ ...prev, proposals, userVotes: { ...prev.userVotes, ...userVotesMap } }));
     } catch (error) {
       console.warn('Failed to load proposals:', error);
     }
