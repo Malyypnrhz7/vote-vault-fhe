@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { useContract } from "@/hooks/useContract";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface Proposal {
   id: string;
@@ -193,7 +194,7 @@ export const VotingInterface = () => {
               </div>
               <div className="flex gap-2">
                 {!electionEnded && (
-                  <Button onClick={handleEndElection} variant="outline">
+                  <Button onClick={handleEndElection} variant="outline" disabled={isLoading}>
                     End Election
                   </Button>
                 )}
@@ -219,7 +220,28 @@ export const VotingInterface = () => {
             )}
 
             <div className="space-y-4">
-              {isLiveMode ? (
+              {isLiveMode && isLoading ? (
+                <>
+                  <div className="p-4 border rounded-lg">
+                    <Skeleton className="h-6 w-56 mb-2" />
+                    <Skeleton className="h-4 w-80 mb-2" />
+                    <Skeleton className="h-4 w-64 mb-4" />
+                    <Skeleton className="h-10 w-full" />
+                  </div>
+                  <div className="p-4 border rounded-lg">
+                    <Skeleton className="h-6 w-44 mb-2" />
+                    <Skeleton className="h-4 w-72 mb-2" />
+                    <Skeleton className="h-4 w-60 mb-4" />
+                    <Skeleton className="h-10 w-full" />
+                  </div>
+                  <div className="p-4 border rounded-lg">
+                    <Skeleton className="h-6 w-64 mb-2" />
+                    <Skeleton className="h-4 w-72 mb-2" />
+                    <Skeleton className="h-4 w-56 mb-4" />
+                    <Skeleton className="h-10 w-full" />
+                  </div>
+                </>
+              ) : isLiveMode ? (
                 proposals.map((proposal) => (
                   <ProposalCard
                     key={proposal.id}
