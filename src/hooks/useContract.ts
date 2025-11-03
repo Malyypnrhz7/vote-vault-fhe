@@ -54,8 +54,9 @@ export const useContract = () => {
         provider = new BrowserProvider((window as any).ethereum);
       }
 
-      // Check if contract address is configured
-      if (!process.env.VITE_CONTRACT_ADDRESS || process.env.VITE_CONTRACT_ADDRESS === '0x0000000000000000000000000000000000000000') {
+      // Check if contract address is configured (Vite env)
+      const contractAddr = (import.meta as any).env?.VITE_CONTRACT_ADDRESS as string | undefined;
+      if (!contractAddr || contractAddr === '0x0000000000000000000000000000000000000000') {
         console.warn('Contract address not configured, running in demo mode');
         setState(prev => ({
           ...prev,
