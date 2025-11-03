@@ -116,7 +116,7 @@ export const useContract = () => {
           }
         }
       } catch (_) {}
-
+      
       setState(prev => ({
         ...prev,
         contract,
@@ -189,7 +189,7 @@ export const useContract = () => {
         const provider = new (await import('ethers')).BrowserProvider((window as any).ethereum);
         contractForWrite = await (await import('@/lib/contract')).createContractInstance(provider);
       }
-
+      
       const receipt = await CONTRACT_FUNCTIONS.castVote(
         contractForWrite,
         parseInt(proposalId),
@@ -198,7 +198,7 @@ export const useContract = () => {
       
       // Reload proposals after casting vote to reflect latest on-chain data
       await loadProposals();
-
+      
       // Update user votes
       setState(prev => ({
         ...prev,
@@ -233,7 +233,7 @@ export const useContract = () => {
         const provider = new (await import('ethers')).BrowserProvider((window as any).ethereum);
         contractForWrite = await (await import('@/lib/contract')).createContractInstance(provider);
       }
-
+      
       const receipt = await CONTRACT_FUNCTIONS.endProposal(
         contractForWrite,
         parseInt(proposalId)

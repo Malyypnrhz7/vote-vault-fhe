@@ -71,7 +71,7 @@ export const FHE_UTILS = {
       return { handle, inputProof };
     }
   },
-
+  
   // Format proposal duration
   formatDuration: (days: number): number => days * 24 * 60 * 60,
 };

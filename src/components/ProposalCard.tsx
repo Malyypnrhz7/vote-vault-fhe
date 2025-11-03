@@ -27,15 +27,16 @@ export const ProposalCard = ({
   onVote,
   hasVoted,
   userVote,
+  showEncryptedCount = false,
 }: ProposalCardProps) => {
   const [isVoting, setIsVoting] = useState(false);
 
   const handleVote = async (vote: "for" | "against") => {
     try {
-      setIsVoting(true);
-      toast("Encrypting your vote...", {
-        description: "Your vote is being encrypted using FHE technology",
-      });
+    setIsVoting(true);
+    toast("Encrypting your vote...", {
+      description: "Your vote is being encrypted using FHE technology",
+    });
       await onVote(id, vote);
     } catch (_e) {
       // VotingInterface will handle error toasts; keep quiet here
