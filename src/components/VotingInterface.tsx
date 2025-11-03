@@ -170,6 +170,8 @@ export const VotingInterface = () => {
   const contractAddr = (import.meta as any).env?.VITE_CONTRACT_ADDRESS as string | undefined;
   const isLiveMode = !!contractAddr && contractAddr !== '0x0000000000000000000000000000000000000000';
 
+  const yourVotesCount = Object.values(userVotes || {}).filter(Boolean).length;
+
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8">
@@ -258,8 +260,9 @@ export const VotingInterface = () => {
 
           <div className="space-y-6">
             <BallotBox
-              isActive={votes.length > 0}
-              voteCount={votes.length}
+              isActive={isLiveMode}
+              voteCount={yourVotesCount}
+              showEncryptedCount={isLiveMode}
               onVoteCast={() => {}}
             />
 
@@ -268,7 +271,7 @@ export const VotingInterface = () => {
               <div className="space-y-2">
                 <div className="flex justify-between">
                   <span className="text-sm">Your votes:</span>
-                  <Badge variant="secondary">{votes.length}</Badge>
+                  <Badge variant="secondary">{yourVotesCount}</Badge>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm">Mode:</span>

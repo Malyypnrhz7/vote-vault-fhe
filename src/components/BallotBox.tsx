@@ -6,9 +6,10 @@ interface BallotBoxProps {
   isActive: boolean;
   voteCount: number;
   onVoteCast: () => void;
+  showEncryptedCount?: boolean;
 }
 
-export const BallotBox = ({ isActive, voteCount, onVoteCast }: BallotBoxProps) => {
+export const BallotBox = ({ isActive, voteCount, onVoteCast, showEncryptedCount = false }: BallotBoxProps) => {
   const [animatingVote, setAnimatingVote] = useState(false);
 
   const handleVoteCast = () => {
@@ -36,7 +37,7 @@ export const BallotBox = ({ isActive, voteCount, onVoteCast }: BallotBoxProps) =
 
         {/* Vote counter display */}
         <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-primary-foreground/10 px-3 py-1 rounded text-primary-foreground text-sm font-mono">
-          {voteCount} votes
+          {showEncryptedCount ? 'Encrypted' : `${voteCount} votes`}
         </div>
 
         {/* Animated ballot */}
