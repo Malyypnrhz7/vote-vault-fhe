@@ -128,3 +128,80 @@ This project is licensed under the MIT License.
 ## Support
 
 For support and questions, please open an issue in the GitHub repository.
+
+## Deployed Contracts
+
+- Network: Sepolia (chainId: 11155111)
+- Contract: `VoteVaultFHE`
+- Address: `0x69f51be36dE88a00850827c622c15B03C2F67d79`
+- Verifier Address: `0x0000000000000000000000000000000000000000`
+
+Recommended dApp environment variables:
+
+```
+VITE_CHAIN_ID=11155111
+VITE_RPC_URL=https://1rpc.io/sepolia
+VITE_CONTRACT_ADDRESS=0x69f51be36dE88a00850827c622c15B03C2F67d79
+VITE_VERIFIER_ADDRESS=0x0000000000000000000000000000000000000000
+VITE_WALLET_CONNECT_PROJECT_ID=<your_walletconnect_project_id>
+```
+
+## System Architecture
+
+High-level components and data flow:
+
+```
+Frontend (Vite + React + TypeScript)
+  ├─ Wallet: RainbowKit + Wagmi (ethers v6 signer for writes, viem/http for reads)
+  ├─ Relayer SDK Loader: loads Zama Relayer SDK via CDN and inits FHE instance
+  ├─ Contract Module: dynamic encryption (createEncryptedInput → add32 → encrypt)
+  ├─ UI:
+  │   ├─ VotingInterface: lists proposals (read-only RPC), write ops only with signer
+  │   ├─ ProposalCard: vote buttons; disables when hasVoted or proposal ended
+  │   └─ BallotBox: shows "Encrypted" in live mode
+  └─ Env: VITE_* (RPC URL, chainId, contract address, WalletConnect)
+
+Smart Contract (Solidity, FHEVM)
+  ├─ VoteVaultFHE.sol (extends SepoliaConfig)
+  │   ├─ castVote(externalEuint32, proof) → homomorphic tally (for/against/total)
+  │   ├─ getEncryptedTallies(proposalId) → (bytes32, bytes32, bytes32)
+  │   ├─ getProposalInfo(proposalId) → metadata (counts are encrypted client-only)
+  │   └─ ACL: FHE.allow for contract/sender/verifier on tallies
+  └─ Build: Hardhat + @fhevm/hardhat-plugin (local mock tests)
+
+Relayer (Browser)
+  └─ CDN script load → initSDK → createInstance(SepoliaConfig) → encrypt inputs
+```
+
+Key behaviors:
+
+- Encrypted counts: In live mode, UI shows `Encrypted` instead of a number. Cleartext tallies are not available until a decryption phase/strategy is implemented (oracle/user-decrypt).
+- Vote direction privacy: In live mode, UI only shows "You voted on this proposal" (no FOR/AGAINST text) to preserve privacy.
+- Double-vote prevention: UI disables buttons using on-chain `hasVoted` per account and guards writes with proposal `isActive`/`endTime` checks.
+
+## How It Works (MVP Loop)
+
+1) Create proposal: anyone can create proposals with a duration. The contract stores metadata and initializes encrypted counters to zero.
+2) Cast vote (encrypted): frontend asks Relayer SDK to encrypt a 0/1 input (against/for) for this contract and the current user, then calls `castVote(handle, proof)`.
+3) Homomorphic tally: contract updates `forVotes`, `againstVotes`, `totalVotes` in encrypted form and grants decryption rights to contract, voter, and verifier.
+4) Finalize: after `endTime`, proposals become inactive. Results can be decrypted later via oracle/user-decrypt flow (endpoint to be integrated as needed).
+
+## Run Locally
+
+```
+npm install
+npm run dev
+```
+
+Set `.env.local` using the variables above. Live mode is enabled when `VITE_CONTRACT_ADDRESS` is a non-zero address.
+
+## Tests
+
+- Local FHE mock: `npm test` (Hardhat + @fhevm/hardhat-plugin)
+- Sepolia integration: `npx hardhat test test/VoteVaultFHESepolia.mjs --network sepolia`
+
+## Troubleshooting
+
+- Vote reverts with "Proposal is not active": The proposal has ended on-chain. UI now guards writes, but if you still see active buttons, refresh or create a new proposal.
+- Relayer SDK not initialized / encryption handle all zeros: Provide a valid Relayer setup in production; the app blocks sending mock-encrypted votes on testnet.
+- RPC 408 on Vercel: set a stable `VITE_RPC_URL` (Infura/Alchemy or `https://1rpc.io/sepolia`).
