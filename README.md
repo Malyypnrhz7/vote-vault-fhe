@@ -133,7 +133,7 @@ For support and questions, please open an issue in the GitHub repository.
 
 - Network: Sepolia (chainId: 11155111)
 - Contract: `VoteVaultFHE`
-- Address: `0x69f51be36dE88a00850827c622c15B03C2F67d79`
+- Address: [`0x69f51be36dE88a00850827c622c15B03C2F67d79`](https://sepolia.etherscan.io/address/0x69f51be36dE88a00850827c622c15B03C2F67d79)
 - Verifier Address: `0x0000000000000000000000000000000000000000`
 
 Recommended dApp environment variables:
