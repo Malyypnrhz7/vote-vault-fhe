@@ -1,5 +1,5 @@
 // Contract configuration and integration for VoteVaultFHE
-import { BrowserProvider, Contract } from 'ethers';
+import { BrowserProvider, Contract, JsonRpcProvider } from 'ethers';
 
 // Contract ABI - This would be generated from the compiled contract
 export const VOTE_VAULT_ABI = [
@@ -44,6 +44,11 @@ export const createContractInstance = async (provider: BrowserProvider) => {
   return new Contract(CONTRACT_CONFIG.contractAddress, VOTE_VAULT_ABI, signer);
 };
 
+export const createReadOnlyContract = () => {
+  const provider = new JsonRpcProvider(CONTRACT_CONFIG.rpcUrl);
+  return new Contract(CONTRACT_CONFIG.contractAddress, VOTE_VAULT_ABI, provider);
+};
+
 // FHE utility functions
 export const FHE_UTILS = {
   // Try to encrypt input using Zama relayer SDK; fallback to mock in dev
@@ -53,11 +58,11 @@ export const FHE_UTILS = {
     choice: 'for' | 'against'
   ): Promise<{ handle: `0x${string}`; inputProof: `0x${string}` }> => {
     try {
-      const sdk: any = await import('@zama-fhe/relayer-sdk');
-      const enc = await sdk
-        .createEncryptedInput(contractAddress, userAddress)
-        .add32(choice === 'for' ? 1 : 0)
-        .encrypt();
+      const { getFhevmInstance } = await import('./relayer-loader');
+      const instance: any = await getFhevmInstance();
+      const input = instance.createEncryptedInput(contractAddress, userAddress);
+      input.add32(choice === 'for' ? 1 : 0);
+      const enc = await input.encrypt();
       return { handle: enc.handles[0], inputProof: enc.inputProof };
     } catch (_e) {
       // Dev fallback (non-FHE): do not use in production
@@ -98,6 +103,19 @@ export const CONTRACT_FUNCTIONS = {
       signer,
       voteChoice,
     );
+    // If encryption fallback produced zero handle, block on live networks
+    const zero64 = /^0x0{64}$/i;
+    try {
+      const net = await (contract.runner as any)?.provider?.getNetwork?.();
+      const chainId = Number(net?.chainId ?? 0);
+      if (zero64.test(handle) && chainId === (Number(import.meta.env?.VITE_CHAIN_ID ?? 11155111))) {
+        throw new Error(
+          'FHE relayer is not configured. Please set up a valid relayer for encryption before voting on testnet.',
+        );
+      }
+    } catch (_e) {
+      // If we cannot read network, still attempt tx; providers may enforce
+    }
     const tx = await contract.castVote(proposalId, handle, inputProof);
     const receipt = await tx.wait();
     return receipt;

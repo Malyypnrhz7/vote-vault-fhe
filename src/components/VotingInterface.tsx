@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useConnectModal } from '@rainbow-me/rainbowkit';
 import { ProposalCard } from "./ProposalCard";
 import { BallotBox } from "./BallotBox";
 import { Button } from "@/components/ui/button";
@@ -55,8 +56,15 @@ export const VotingInterface = () => {
     castVote, 
     endProposal, 
     isLoading, 
-    error 
+    error,
+    initializeContract,
   } = useContract();
+  const { openConnectModal } = useConnectModal();
+
+  // Load proposals (read-only) on first render even without wallet
+  useEffect(() => {
+    initializeContract();
+  }, [initializeContract]);
 
   const handleVote = async (proposalId: string, vote: "for" | "against") => {
     // In demo mode (no contract data), simulate voting
@@ -72,7 +80,7 @@ export const VotingInterface = () => {
     }
 
     if (!isConnected) {
-      toast.error("Please connect your wallet to vote");
+      openConnectModal?.();
       return;
     }
 
@@ -106,7 +114,7 @@ export const VotingInterface = () => {
     }
 
     if (!isConnected) {
-      toast.error("Please connect your wallet to end election");
+      openConnectModal?.();
       return;
     }
 

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { BrowserProvider } from 'ethers';
 import { 
   createContractInstance, 
+  createReadOnlyContract,
   CONTRACT_FUNCTIONS, 
   handleContractError,
   CONTRACT_ERRORS 
@@ -68,11 +69,16 @@ export const useContract = () => {
         return;
       }
       
-      if (!provider) {
-        throw new Error('No injected wallet provider found');
+      // Build a contract instance that can read without wallet, and write when wallet exists
+      let contract: any = createReadOnlyContract();
+      if (provider) {
+        try {
+          contract = await createContractInstance(provider);
+        } catch (e) {
+          console.warn('Falling back to read-only provider for listing proposals:', e);
+        }
       }
-      const contract = await createContractInstance(provider);
-      const proposalCount = await CONTRACT_FUNCTIONS.getProposalCount(contract);
+      const proposalCount = Number(await CONTRACT_FUNCTIONS.getProposalCount(contract));
       
       // Load existing proposals
       const proposals: Proposal[] = [];
@@ -83,15 +89,15 @@ export const useContract = () => {
             id: i.toString(),
             title: proposalInfo.title,
             description: proposalInfo.description,
-            forVotes: proposalInfo.forVotes,
-            againstVotes: proposalInfo.againstVotes,
-            totalVotes: proposalInfo.totalVotes,
+            forVotes: Number(proposalInfo.forVotes ?? 0),
+            againstVotes: Number(proposalInfo.againstVotes ?? 0),
+            totalVotes: Number(proposalInfo.totalVotes ?? 0),
             isActive: proposalInfo.isActive,
             isEnded: proposalInfo.isEnded,
             proposer: proposalInfo.proposer,
-            startTime: proposalInfo.startTime,
-            endTime: proposalInfo.endTime,
-            creationTime: proposalInfo.creationTime
+            startTime: Number(proposalInfo.startTime ?? 0),
+            endTime: Number(proposalInfo.endTime ?? 0),
+            creationTime: Number(proposalInfo.creationTime ?? 0)
           });
         } catch (error) {
           console.warn(`Failed to load proposal ${i}:`, error);
@@ -162,8 +168,16 @@ export const useContract = () => {
     try {
       setState(prev => ({ ...prev, isLoading: true, error: null }));
       
+      // Ensure we have a signer-backed contract for writes
+      let contractForWrite: any = state.contract;
+      const hasSigner = !!(state.contract?.runner && (state.contract.runner as any).getAddress);
+      if (!hasSigner && typeof window !== 'undefined' && (window as any).ethereum) {
+        const provider = new (await import('ethers')).BrowserProvider((window as any).ethereum);
+        contractForWrite = await (await import('@/lib/contract')).createContractInstance(provider);
+      }
+
       const receipt = await CONTRACT_FUNCTIONS.castVote(
-        state.contract,
+        contractForWrite,
         parseInt(proposalId),
         voteChoice
       );
@@ -195,8 +209,16 @@ export const useContract = () => {
     try {
       setState(prev => ({ ...prev, isLoading: true, error: null }));
       
+      // Ensure signer-backed contract for writes
+      let contractForWrite: any = state.contract;
+      const hasSigner = !!(state.contract?.runner && (state.contract.runner as any).getAddress);
+      if (!hasSigner && typeof window !== 'undefined' && (window as any).ethereum) {
+        const provider = new (await import('ethers')).BrowserProvider((window as any).ethereum);
+        contractForWrite = await (await import('@/lib/contract')).createContractInstance(provider);
+      }
+
       const receipt = await CONTRACT_FUNCTIONS.endProposal(
-        state.contract,
+        contractForWrite,
         parseInt(proposalId)
       );
       
@@ -237,7 +259,7 @@ export const useContract = () => {
     }
 
     try {
-      const proposalCount = await CONTRACT_FUNCTIONS.getProposalCount(state.contract);
+      const proposalCount = Number(await CONTRACT_FUNCTIONS.getProposalCount(state.contract));
       const proposals: Proposal[] = [];
       
       for (let i = 0; i < proposalCount; i++) {
@@ -247,15 +269,15 @@ export const useContract = () => {
             id: i.toString(),
             title: proposalInfo.title,
             description: proposalInfo.description,
-            forVotes: proposalInfo.forVotes,
-            againstVotes: proposalInfo.againstVotes,
-            totalVotes: proposalInfo.totalVotes,
+            forVotes: Number(proposalInfo.forVotes ?? 0),
+            againstVotes: Number(proposalInfo.againstVotes ?? 0),
+            totalVotes: Number(proposalInfo.totalVotes ?? 0),
             isActive: proposalInfo.isActive,
             isEnded: proposalInfo.isEnded,
             proposer: proposalInfo.proposer,
-            startTime: proposalInfo.startTime,
-            endTime: proposalInfo.endTime,
-            creationTime: proposalInfo.creationTime
+            startTime: Number(proposalInfo.startTime ?? 0),
+            endTime: Number(proposalInfo.endTime ?? 0),
+            creationTime: Number(proposalInfo.creationTime ?? 0)
           });
         } catch (error) {
           console.warn(`Failed to load proposal ${i}:`, error);
