@@ -16,6 +16,7 @@ interface ProposalCardProps {
   hasVoted: boolean;
   userVote?: "for" | "against";
   showEncryptedCount?: boolean;
+  isActive?: boolean;
 }
 
 export const ProposalCard = ({
@@ -28,6 +29,7 @@ export const ProposalCard = ({
   hasVoted,
   userVote,
   showEncryptedCount = false,
+  isActive = true,
 }: ProposalCardProps) => {
   const [isVoting, setIsVoting] = useState(false);
 
@@ -57,8 +59,8 @@ export const ProposalCard = ({
                   <ExternalLink className="h-4 w-4 opacity-50" />
                 </Link>
               </CardTitle>
-              <Badge variant={hasVoted ? "secondary" : "outline"}>
-                {hasVoted ? "Voted" : "Pending"}
+              <Badge variant={hasVoted ? "secondary" : (isActive ? "outline" : "destructive")}>
+                {hasVoted ? "Voted" : isActive ? "Pending" : "Ended"}
               </Badge>
             </div>
             <CardDescription>{description}</CardDescription>
@@ -92,7 +94,7 @@ export const ProposalCard = ({
           <div className="flex gap-3">
             <Button
               onClick={() => handleVote("for")}
-              disabled={isVoting}
+              disabled={isVoting || !isActive}
               className="flex-1 bg-success hover:bg-success/90 text-success-foreground"
             >
               <ThumbsUp className="h-4 w-4 mr-2" />
@@ -100,7 +102,7 @@ export const ProposalCard = ({
             </Button>
             <Button
               onClick={() => handleVote("against")}
-              disabled={isVoting}
+              disabled={isVoting || !isActive}
               variant="destructive"
               className="flex-1"
             >

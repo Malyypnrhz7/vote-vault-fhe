@@ -85,6 +85,13 @@ export const VotingInterface = () => {
     }
 
     try {
+      // Guard: prevent sending tx if proposal is not active (UI may be stale)
+      const p = proposals.find(p => p.id === proposalId);
+      if (!p || !p.isActive || p.endTime <= Math.floor(Date.now()/1000)) {
+        toast.error("Proposal is not active anymore");
+        return;
+      }
+
       await castVote(proposalId, vote);
       setVotes((prev) => [
         ...prev.filter((v) => v.proposalId !== proposalId),
@@ -224,6 +231,7 @@ export const VotingInterface = () => {
                     showEncryptedCount
                     onVote={handleVote}
                     hasVoted={userVotes[proposal.id] || !!getVoteForProposal(proposal.id)}
+                    isActive={proposal.isActive && proposal.endTime > Math.floor(Date.now()/1000)}
                     userVote={getVoteForProposal(proposal.id)?.vote}
                   />
                 ))
