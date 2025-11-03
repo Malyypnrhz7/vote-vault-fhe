@@ -1,5 +1,5 @@
 // Contract configuration and integration for VoteVaultFHE
-import { BrowserProvider, Contract, parseEther } from 'ethers';
+import { BrowserProvider, Contract } from 'ethers';
 
 // Contract ABI - This would be generated from the compiled contract
 export const VOTE_VAULT_ABI = [
@@ -12,12 +12,15 @@ export const VOTE_VAULT_ABI = [
   
   // Functions
   "function createProposal(string memory _title, string memory _description, uint256 _duration) external returns (uint256)",
-  "function castVote(uint256 _proposalId, bytes calldata voteChoice, bytes calldata inputProof) external returns (uint256)",
+  // externalEuint32 is passed as a handle (bytes32)
+  "function castVote(uint256 _proposalId, bytes32 voteChoice, bytes inputProof) external returns (uint256)",
   "function endProposal(uint256 _proposalId) external",
   "function revealVote(uint256 _voteId, uint8 _voteChoice, bytes calldata _proof) external",
   "function decryptResults(uint256 _proposalId) external",
   "function updateVoterReputation(address _voter, bytes calldata _reputation) external",
   "function getProposalInfo(uint256 _proposalId) external view returns (string memory, string memory, uint8, uint8, uint8, bool, bool, address, uint256, uint256, uint256)",
+  // Encrypted tallies for off-chain decryption
+  "function getEncryptedTallies(uint256 _proposalId) external view returns (bytes32, bytes32, bytes32)",
   "function getVoteInfo(uint256 _voteId) external view returns (uint8, address, uint256, bool)",
   "function getVoterInfo(address _voter) external view returns (uint8, bool, uint256)",
   "function hasVoted(address _voter, uint256 _proposalId) external view returns (bool)",
@@ -29,11 +32,10 @@ export const VOTE_VAULT_ABI = [
 
 // Contract configuration
 export const CONTRACT_CONFIG = {
-  // Sepolia testnet configuration for FHE
-  chainId: 11155111, // Sepolia
-  rpcUrl: 'https://1rpc.io/sepolia', // Public RPC endpoint
-  contractAddress: '0x0000000000000000000000000000000000000000', // Replace with deployed contract address
-  verifierAddress: '0x0000000000000000000000000000000000000000', // Replace with verifier address
+  chainId: Number(import.meta.env.VITE_CHAIN_ID || 11155111),
+  rpcUrl: import.meta.env.VITE_RPC_URL || 'https://1rpc.io/sepolia',
+  contractAddress: import.meta.env.VITE_CONTRACT_ADDRESS || '0x0000000000000000000000000000000000000000',
+  verifierAddress: import.meta.env.VITE_VERIFIER_ADDRESS || '0x0000000000000000000000000000000000000000',
 };
 
 // Contract instance creation
@@ -44,20 +46,29 @@ export const createContractInstance = async (provider: BrowserProvider) => {
 
 // FHE utility functions
 export const FHE_UTILS = {
-  // Convert vote choice to encrypted format
-  encryptVoteChoice: (choice: 'for' | 'against'): number => {
-    return choice === 'for' ? 1 : 0;
+  // Try to encrypt input using Zama relayer SDK; fallback to mock in dev
+  encryptVoteChoice: async (
+    contractAddress: string,
+    userAddress: string,
+    choice: 'for' | 'against'
+  ): Promise<{ handle: `0x${string}`; inputProof: `0x${string}` }> => {
+    try {
+      const sdk: any = await import('@zama-fhe/relayer-sdk');
+      const enc = await sdk
+        .createEncryptedInput(contractAddress, userAddress)
+        .add32(choice === 'for' ? 1 : 0)
+        .encrypt();
+      return { handle: enc.handles[0], inputProof: enc.inputProof };
+    } catch (_e) {
+      // Dev fallback (non-FHE): do not use in production
+      const handle = `0x${'0'.repeat(64)}` as const;
+      const inputProof = `0x${'0'.repeat(64)}` as const;
+      return { handle, inputProof };
+    }
   },
-  
-  // Create mock proof for development
-  createMockProof: (): string => {
-    return '0x' + '0'.repeat(64); // Mock proof for development
-  },
-  
+
   // Format proposal duration
-  formatDuration: (days: number): number => {
-    return days * 24 * 60 * 60; // Convert days to seconds
-  }
+  formatDuration: (days: number): number => days * 24 * 60 * 60,
 };
 
 // Contract interaction functions
@@ -81,9 +92,13 @@ export const CONTRACT_FUNCTIONS = {
     proposalId: number,
     voteChoice: 'for' | 'against'
   ) => {
-    const encryptedChoice = FHE_UTILS.encryptVoteChoice(voteChoice);
-    const proof = FHE_UTILS.createMockProof();
-    const tx = await contract.castVote(proposalId, encryptedChoice, proof);
+    const signer = await contract.runner!.getAddress();
+    const { handle, inputProof } = await FHE_UTILS.encryptVoteChoice(
+      contract.target as string,
+      signer,
+      voteChoice,
+    );
+    const tx = await contract.castVote(proposalId, handle, inputProof);
     const receipt = await tx.wait();
     return receipt;
   },
@@ -121,6 +136,16 @@ export const CONTRACT_FUNCTIONS = {
   // Get proposal count
   getProposalCount: async (contract: Contract) => {
     return await contract.getProposalCount();
+  },
+
+  // Read encrypted tallies for a proposal (bytes32 values)
+  getEncryptedTallies: async (contract: Contract, proposalId: number) => {
+    const [forEnc, againstEnc, totalEnc] = await contract.getEncryptedTallies(proposalId);
+    return { forEnc, againstEnc, totalEnc } as {
+      forEnc: `0x${string}`;
+      againstEnc: `0x${string}`;
+      totalEnc: `0x${string}`;
+    };
   },
   
   // Check if voting is active

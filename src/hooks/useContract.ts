@@ -44,10 +44,16 @@ export const useContract = () => {
   });
 
   // Initialize contract connection
-  const initializeContract = useCallback(async (provider: BrowserProvider) => {
+  const initializeContract = useCallback(async () => {
     try {
       setState(prev => ({ ...prev, isLoading: true, error: null }));
       
+      // Create provider from injected wallet if available
+      let provider: BrowserProvider | null = null;
+      if (typeof window !== 'undefined' && (window as any).ethereum) {
+        provider = new BrowserProvider((window as any).ethereum);
+      }
+
       // Check if contract address is configured
       if (!process.env.VITE_CONTRACT_ADDRESS || process.env.VITE_CONTRACT_ADDRESS === '0x0000000000000000000000000000000000000000') {
         console.warn('Contract address not configured, running in demo mode');
@@ -61,6 +67,9 @@ export const useContract = () => {
         return;
       }
       
+      if (!provider) {
+        throw new Error('No injected wallet provider found');
+      }
       const contract = await createContractInstance(provider);
       const proposalCount = await CONTRACT_FUNCTIONS.getProposalCount(contract);
       
@@ -100,7 +109,7 @@ export const useContract = () => {
       console.warn('Contract initialization failed, running in demo mode:', error);
       setState(prev => ({
         ...prev,
-        provider,
+        provider: null,
         isConnected: true,
         isLoading: false,
         proposals: [] // Empty proposals will trigger demo mode

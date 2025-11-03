@@ -8,8 +8,10 @@ async function main() {
   const VoteVaultFHE = await ethers.getContractFactory("VoteVaultFHE");
 
   // Deploy the contract
-  // Note: You'll need to provide a verifier address
-  const verifierAddress = "0x0000000000000000000000000000000000000000"; // Replace with actual verifier address
+  // Verifier address can be provided via env, default to deployer
+  const [deployer] = await ethers.getSigners();
+  const envVerifier = process.env.VERIFIER_ADDRESS;
+  const verifierAddress = envVerifier && envVerifier !== '' ? envVerifier : await deployer.getAddress();
   
   const voteVault = await VoteVaultFHE.deploy(verifierAddress);
 

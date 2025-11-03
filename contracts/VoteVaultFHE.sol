@@ -25,7 +25,7 @@ contract VoteVaultFHE is SepoliaConfig {
     struct Vote {
         euint32 voteId;
         euint32 proposalId;
-        euint8 voteChoice; // 0 = against, 1 = for
+        euint32 voteChoice; // 0 = against, 1 = for
         address voter;
         uint256 timestamp;
         bool isRevealed;
@@ -112,7 +112,7 @@ contract VoteVaultFHE is SepoliaConfig {
     
     function castVote(
         uint256 _proposalId,
-        externalEuint8 voteChoice,
+        externalEuint32 voteChoice,
         bytes calldata inputProof
     ) public returns (uint256) {
         require(proposals[_proposalId].proposer != address(0), "Proposal does not exist");
@@ -120,22 +120,43 @@ contract VoteVaultFHE is SepoliaConfig {
         require(block.timestamp <= proposals[_proposalId].endTime, "Voting period has ended");
         require(!hasVotedOnProposal[msg.sender][_proposalId], "Already voted on this proposal");
         
-        // Convert externalEuint8 to euint8 using FHE.fromExternal
-        euint8 internalVoteChoice = FHE.fromExternal(voteChoice, inputProof);
+        // Convert to internal encrypted value (expected 0 or 1)
+        euint32 encryptedChoice = FHE.fromExternal(voteChoice, inputProof);
         
         uint256 voteId = voteCounter++;
         
         votes[voteId] = Vote({
             voteId: FHE.asEuint32(0), // Will be set properly later
             proposalId: FHE.asEuint32(0), // Will be set properly later
-            voteChoice: internalVoteChoice,
+            voteChoice: encryptedChoice,
             voter: msg.sender,
             timestamp: block.timestamp,
             isRevealed: false
         });
         
-        // Update proposal vote count
-        proposals[_proposalId].totalVotes = FHE.add(proposals[_proposalId].totalVotes, FHE.asEuint32(1));
+        // Homomorphic tally update based on encrypted vote choice (0 = against, 1 = for)
+        euint32 one = FHE.asEuint32(1);
+        euint32 forInc = encryptedChoice;
+        euint32 againstInc = FHE.sub(one, encryptedChoice);
+
+        proposals[_proposalId].forVotes = FHE.add(proposals[_proposalId].forVotes, forInc);
+        proposals[_proposalId].againstVotes = FHE.add(proposals[_proposalId].againstVotes, againstInc);
+        proposals[_proposalId].totalVotes = FHE.add(proposals[_proposalId].totalVotes, one);
+
+        // Grant decryption rights to contract, the caller and the verifier for the tallies
+        FHE.allowThis(proposals[_proposalId].forVotes);
+        FHE.allowThis(proposals[_proposalId].againstVotes);
+        FHE.allowThis(proposals[_proposalId].totalVotes);
+
+        FHE.allow(proposals[_proposalId].forVotes, msg.sender);
+        FHE.allow(proposals[_proposalId].againstVotes, msg.sender);
+        FHE.allow(proposals[_proposalId].totalVotes, msg.sender);
+
+        if (verifier != address(0)) {
+            FHE.allow(proposals[_proposalId].forVotes, verifier);
+            FHE.allow(proposals[_proposalId].againstVotes, verifier);
+            FHE.allow(proposals[_proposalId].totalVotes, verifier);
+        }
         
         // Mark voter as having voted on this proposal
         hasVotedOnProposal[msg.sender][_proposalId] = true;
@@ -223,9 +244,9 @@ contract VoteVaultFHE is SepoliaConfig {
         return (
             proposal.title,
             proposal.description,
-            0, // FHE.decrypt(proposal.forVotes) - will be decrypted off-chain
-            0, // FHE.decrypt(proposal.againstVotes) - will be decrypted off-chain
-            0, // FHE.decrypt(proposal.totalVotes) - will be decrypted off-chain
+            0,
+            0,
+            0,
             proposal.isActive,
             proposal.isEnded,
             proposal.proposer,
@@ -233,6 +254,17 @@ contract VoteVaultFHE is SepoliaConfig {
             proposal.endTime,
             proposal.creationTime
         );
+    }
+
+    /// @notice Returns encrypted tallies for a proposal (for off-chain decryption)
+    /// @dev Consumers should use user decryption to read values when permitted
+    function getEncryptedTallies(uint256 _proposalId)
+        external
+        view
+        returns (euint32 forVotes, euint32 againstVotes, euint32 totalVotes)
+    {
+        Proposal storage proposal = proposals[_proposalId];
+        return (proposal.forVotes, proposal.againstVotes, proposal.totalVotes);
     }
     
     function getVoteInfo(uint256 _voteId) public view returns (
