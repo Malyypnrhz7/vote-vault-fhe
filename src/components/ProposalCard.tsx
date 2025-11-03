@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ThumbsUp, ThumbsDown, Clock, Users, ExternalLink } from "lucide-react";
+import { ThumbsUp, ThumbsDown, Clock, Users, ExternalLink, Lock } from "lucide-react";
 import { toast } from "sonner";
 
 interface ProposalCardProps {
@@ -80,16 +80,23 @@ export const ProposalCard = ({
         </div>
 
         {hasVoted ? (
-          <div className="flex items-center gap-2 p-3 bg-success/10 rounded-lg">
-            {userVote === "for" ? (
-              <ThumbsUp className="h-4 w-4 text-success" />
-            ) : (
-              <ThumbsDown className="h-4 w-4 text-destructive" />
-            )}
-            <span className="text-sm font-medium">
-              You voted {userVote === "for" ? "FOR" : "AGAINST"} this proposal
-            </span>
-          </div>
+          showEncryptedCount ? (
+            <div className="flex items-center gap-2 p-3 bg-primary/10 rounded-lg">
+              <Lock className="h-4 w-4 text-primary" />
+              <span className="text-sm font-medium">You voted on this proposal</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 p-3 bg-success/10 rounded-lg">
+              {userVote === "for" ? (
+                <ThumbsUp className="h-4 w-4 text-success" />
+              ) : (
+                <ThumbsDown className="h-4 w-4 text-destructive" />
+              )}
+              <span className="text-sm font-medium">
+                You voted {userVote === "for" ? "FOR" : "AGAINST"} this proposal
+              </span>
+            </div>
+          )
         ) : (
           <div className="flex gap-3">
             <Button
