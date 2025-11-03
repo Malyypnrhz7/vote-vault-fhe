@@ -182,6 +182,9 @@ export const useContract = () => {
         voteChoice
       );
       
+      // Reload proposals after casting vote to reflect latest on-chain data
+      await loadProposals();
+
       // Update user votes
       setState(prev => ({
         ...prev,

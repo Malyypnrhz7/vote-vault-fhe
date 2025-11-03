@@ -167,6 +167,9 @@ export const VotingInterface = () => {
     }
   };
 
+  const contractAddr = (import.meta as any).env?.VITE_CONTRACT_ADDRESS as string | undefined;
+  const isLiveMode = !!contractAddr && contractAddr !== '0x0000000000000000000000000000000000000000';
+
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8">
@@ -207,7 +210,7 @@ export const VotingInterface = () => {
             )}
 
             <div className="space-y-4">
-              {proposals.length > 0 ? (
+              {isLiveMode ? (
                 proposals.map((proposal) => (
                   <ProposalCard
                     key={proposal.id}
@@ -268,8 +271,8 @@ export const VotingInterface = () => {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm">Mode:</span>
-                  <Badge variant={proposals.length === 0 ? "outline" : "default"}>
-                    {proposals.length === 0 ? "Demo" : "Live"}
+                  <Badge variant={isLiveMode ? "default" : "outline"}>
+                    {isLiveMode ? "Live" : "Demo"}
                   </Badge>
                 </div>
                 <div className="flex justify-between">
